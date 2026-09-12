@@ -1,0 +1,13 @@
+numpy>=1.24
+matplotlib>=3.7
+tqdm>=4.65
+# optional, only needed to pull the dataset from the HF hub or read a local mirror:
+datasets>=2.18
+pandas>=2.0
+# optional, only needed for VLM QA generation through an OpenAI-compatible VLM API:
+openai>=1.30
+# optional, only needed for LOCAL Qwen-VL caption generation (ts_cap, GPU server):
+# torch
+# transformers>=4.49
+# accelerate
+# pillow

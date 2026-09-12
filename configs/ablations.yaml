@@ -1,0 +1,73 @@
+
+fixed_across_arms:
+  policy: Qwen/Qwen2.5-VL-3B-Instruct
+  algorithm: RLOO, rollout 32 / train 128 / n_samples 8
+  actor_learning_rate: 1.0e-6
+  lr_warmup_steps: 20
+  init_kl_coef: 0.0
+  generate_max_len: 1024
+  temperature: 1.0
+  num_episodes: 4
+  reward_transform: raw
+  reward_scale: 2.0
+  answer_format: letter
+  max_new_tokens: 8
+  n_rotations: 4
+  number_mask_weight: 0.0
+  save_steps: 50
+  readout_step: 550
+
+arms:
+  lineuprl:
+    reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+    n_options: 4
+    dataset: out_10k_xdomain/rl_decod
+  rm7b:
+    varies: reward model
+    reward_pretrain: Qwen/Qwen2.5-7B-Instruct
+    n_options: 4
+    dataset: out_10k_xdomain/rl_decod
+  rm3b:
+    varies: reward model
+    reward_pretrain: Qwen/Qwen2.5-3B-Instruct
+    n_options: 4
+    dataset: out_10k_xdomain/rl_decod
+  neg6:
+    varies: n_options
+    reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+    n_options: 6
+    dataset: out_10k_xdomain/rl_decod_k10
+  neg8:
+    varies: n_options
+    reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+    n_options: 8
+    dataset: out_10k_xdomain/rl_decod_k10
+  neg10:
+    varies: n_options
+    reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+    n_options: 10
+    dataset: out_10k_xdomain/rl_decod_k10
+  negrand:
+    varies: how negatives are chosen (uniform random within the same length bucket, same overlap filter)
+    reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+    n_options: 4
+    dataset: out_10k_xdomain/rl_decod_negrand
+
+datasets:
+  rl_decod:
+    args: --val-size 500 --pool-size 8 --n-distractors 3 --seed 0
+  rl_decod_k10:
+    args: --val-size 500 --n-distractors 9 --pool-size 9 --seed 0 --out-dir out_10k_xdomain/rl_decod_k10
+  rl_decod_negrand:
+    args: --val-size 500 --n-distractors 9 --pool-size 9 --seed 0 --negatives-order random --neg-seed 1234 --out-dir out_10k_xdomain/rl_decod_negrand
+
+reader_k_grid:
+  readers: [Qwen/Qwen2.5-3B-Instruct, Qwen/Qwen2.5-7B-Instruct, Qwen/Qwen2.5-14B-Instruct]
+  n_options: [4, 6, 8, 10, 12]
+  domains: [tsfragment_val, cats, bedtime]
+  items: python -m decodability_rl.rl.build_reader_k_items
+  scorer: python -m decodability_rl.rl.reader_k_sweep
+  captions_scored:
+    lineuprl: validation captions of the arm (decodability_rl/rl/build_reader_k_items.py)
+    reference: fragments.jsonl ds_caption / data/cats/cats_qualitative_refs.jsonl / BEDTime gold
+  cell_value: (acc - 1/K) / (1 - 1/K)

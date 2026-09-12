@@ -1,0 +1,30 @@
+# regenerable, large, or local
+out_*/render/
+out_*/rl*/
+out_*/qa_gen/
+out_*/sft_teacher/
+!out_10k_xdomain/fragments.jsonl
+bench_data/
+hf_cache/
+/models/
+outputs/
+work/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.env
+.secrets/
+*.local
+.DS_Store
+.idea/
+.vscode/
+*.swp
+# rendered benchmark charts are deterministic intermediates
+results/eval_protocol/**/render/
+

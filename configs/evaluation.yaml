@@ -1,0 +1,59 @@
+
+captioning_at_eval:
+  prompt_family: decodability
+  temperature: 0.0
+  max_tokens_caption: 1024
+  renderer: ts_render (same 600x300 leak-free chart as training)
+
+benchmarks:
+  bedtime:
+    prepare: python -m ts_bedtime.prepare --strategy sbert
+    robustness_variant: --strategy euclid
+    identification_subset: "1,500 series from 3 of the 4 subsets (sushi excluded: 2,048-point series)"
+  cats:
+    prepare: python -m ts_eval.build_cats_series
+    references_for_entailment: data/cats/cats_qualitative_series.jsonl
+    rewrite_prompts: ts_eval/cats_agnostic/rewrite_prompt.md, ts_eval/cats_agnostic/qualitative_prompt.md
+  forecasting_corpora:
+    ETTh2: ETT-small/ETTh2.csv (17,420 rows, column OT)
+    ETTm2: ETT-small/ETTm2.csv (69,680 rows)
+    saugeen: GluonTS saugeenday, train split (23,711 rows)
+    aus_elec: GluonTS australian_electricity_demand, series index 2 (232,212 rows)
+    notes: ts_downstream/README.md
+
+criterion_1_entailment:
+  nli_model: tasksource/deberta-base-long-nli
+  threshold: 0.5
+  direction_reported: gen_entails_gt
+  bedtime_pairs: 3958
+  controls: empty caption (floor), reference vs itself (ceiling)
+  bedtime_second_pass: --prompt-family bedtime_gen --max-tokens-caption 150   # BEDTime's own task-3 prompt ("gen150" variant, appendix)
+
+criterion_2_identification:
+  reader: Qwen/Qwen2.5-14B-Instruct
+  n_options: 4
+  rotations: all 4 gold positions, accuracy averaged; per-position accuracy kept as a control
+  directions: [caption_to_series, series_to_caption]
+  cats_flags: --exclude-datasets "" --pool-negatives-across-datasets
+  chance: 0.25
+  significance: python -m ts_bedtime.criteria12_sig
+
+criterion_3_readout:
+  encoder: google/embeddinggemma-300m
+  head: LoRA r=16 on the encoder, mean-pool, MLP
+  tasks: [forecasting, reconstruction]
+  lookback: 128
+  horizon: 16
+  stride: 1
+  max_windows: 5000
+  data_seed: 2020
+  epochs: 30
+  lr: 3.0e-4
+  batch_size: 32
+  micro_batch_size: 8
+  max_text_len: 0
+  train_seeds: [2020, 2021, 2022, 2023, 2024]
+  metric: test MSE, standardised with training-split statistics
+  controls: --caption-control none | null | shuffled (--shuffle-key <dataset>), plus the naive baseline reported by readout_step
+  significance: two-sided paired t-test across the 5 seeds (ts_downstream/seed_report.py)
+

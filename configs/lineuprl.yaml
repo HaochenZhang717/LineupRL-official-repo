@@ -1,0 +1,81 @@
+
+policy: Qwen/Qwen2.5-VL-3B-Instruct
+verifier: Qwen/Qwen2.5-14B-Instruct
+
+data:
+  source: WinfredGe/TSFragment-600K
+  fragments_index: out_10k_xdomain/fragments.jsonl
+  render:
+    include_ids: out_10k_xdomain/fragments.jsonl
+    out_dir: out_10k_xdomain
+    canvas_px: [600, 300]
+  build:
+    out_dir: out_10k_xdomain/rl_decod
+    val_size: 500
+    seed: 0
+    min_len: 24
+    n_distractors: 3
+    pool_size: 8
+    negatives_order: nearest
+    max_overlap_frac: 0.2
+
+reward_server:
+  reward_pretrain: Qwen/Qwen2.5-14B-Instruct
+  n_options: 4
+  n_rotations: 4
+  score_mode: generate
+  answer_format: letter
+  max_new_tokens: 8
+  reward_transform: raw
+  reward_scale: 2.0
+  resample_negatives: -1
+  number_mask_weight: 0.0
+  mask_api_model: ""
+  batch_size: 16
+
+trainer:
+  advantage_estimator: rloo
+  n_samples_per_prompt: 8
+  n_caps_per_prompt: 8
+  rollout_batch_size: 32
+  train_batch_size: 128
+  micro_rollout_batch_size: 8
+  micro_train_batch_size: 4
+  temperature: 1.0
+  generate_max_len: 1024
+  prompt_max_len: 2048
+  max_epochs: 1
+  num_episodes: 4
+  actor_learning_rate: 1.0e-6
+  lr_warmup_steps: 20
+  init_kl_coef: 0.0
+  normalize_reward: true
+  format_weight: 0.0
+  zero_stage: 2
+  bf16: true
+  gradient_checkpointing: true
+  attn_implementation: flash_attention_2
+  train_vlm: true
+  vllm_num_engines: 4
+  vllm_tensor_parallel_size: 1
+  colocate_all_models: true
+  vllm_enable_sleep: true
+  vllm_gpu_memory_utilization: 0.4
+  enable_prefix_caching: true
+  save_steps: 50
+  save_hf_ckpt: true
+  gpus: 4
+  fork_flags: [remove_pi_old, reward_type=chart, exp_mode=cap_v2, cap_v2_multi_qa, cap_v2_norm, cap_v2_only_cap, cap_remote_reward]
+  cap_prompt: decodability_rl.rl.cap_prompt:TS_CAP_PROMPT
+
+validation:
+  val_file: out_10k_xdomain/rl_decod/val_messages.jsonl
+  n: 500
+  decoding: greedy
+  negatives: fixed
+  reported_checkpoint_step: 550
+  reference_values:
+    untuned_policy: [1.10, 0.55]
+    step_550: [1.808, 0.904]
+    empty_caption: [0.65, 0.32]
+    dataset_caption: [1.63, 0.81]
